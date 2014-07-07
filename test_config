@@ -1,0 +1,3 @@
+fs_type xfs
+base_dir /tmp
+img_size 100

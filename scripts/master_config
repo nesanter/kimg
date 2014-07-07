@@ -1,0 +1,9 @@
+img_name out.img
+img_size 2000
+base_dir .
+fs_type ext2
+fs_options 
+mount_options 
+jobs 
+save 0
+log_dir .
