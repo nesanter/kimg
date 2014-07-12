@@ -76,6 +76,8 @@ RESUME=
 
 IMG_DIR=$(sed 's/[\.].*$//' <<< $IMG_NAME)
 
+cat <<< $IMG_DIR > $TMPDIR/root
+
 mkdir $IMG_DIR || { err "Error creating image directory" ; exit 1 ; }
 
 log "Mounting image (permission required)"
@@ -91,7 +93,7 @@ cd $IMG_DIR
 [ -e .resume ] && log "Resume file found" || {
     mkdir tools
 
-    [ -z "$SRC_DIR" ] && mkdir sources || mkdir -p $SRC_DIR
+    [ -z "$SRC_DIR" ] && mkdir {sources,sources/logs} || mkdir -p {$SRC_DIR,$SRC_DIR/logs}
 
     touch .resume
 }
@@ -110,7 +112,7 @@ while read PKG ; do
 
     log "Installing package $PKG"
 
-    $SD/image-pkg.sh $TMPDIR $PKG >> $LOG 2>> $ERRLOG || { err "Error installing package $PKG" ; exit 1 ; }
+    $SD/image-pkg.sh $TMPDIR $PKG 2>> $ERRLOG || { err "Error installing package $PKG" ; exit 1 ; }
     
     log "Finished package $PKG"
     cat <<< $PKG >> .resume

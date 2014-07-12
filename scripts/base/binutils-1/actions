@@ -1,0 +1,4 @@
+dl http://ftp.gnu.org/gnu/binutils/<PKG>
+extract
+build build.sh
+sh post.sh

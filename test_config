@@ -1,3 +1,4 @@
 fs_type xfs
 base_dir /tmp
 img_size 100
+dl_dir ~/programming/kimg/dl

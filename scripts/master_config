@@ -7,3 +7,4 @@ mount_options
 jobs 
 save 0
 log_dir .
+dl_dir 

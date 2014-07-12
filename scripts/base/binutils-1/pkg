@@ -1,0 +1,28 @@
+<pkg>
+binutils-2.24
+</pkg>
+
+<sources>
+http://ftp.gnu.org/gnu/binutils/$<pkg/>.tar.bz2
+</sources>
+
+<extract>all</extract>
+
+<builddir>yes</builddir>
+
+<build>
+../$<BUILDDIR>/configure \
+    --prefix=/tools \
+    --with-sysroot=$<ROOT> \
+    --target=$<TARGET> \
+    --disable-nls \
+    --disable-werror || exit 1
+
+make -j$JOBS || exit 1
+
+case $(uname -m) in
+    x86_64) mkdir /tools/lib && ln -s lib /tools/lib64 ;;
+esac
+
+make install || exit 1
+</build>
