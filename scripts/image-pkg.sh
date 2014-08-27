@@ -47,19 +47,7 @@ get() {
 [ -d "$TMPDIR" ] || { err "Missing handoff directory (PKG)" ; exit 1 ; }
 
 SD=$(cat $TMPDIR/sd)
-SRC_DIR_RAW=$(cfg src_dir)
-if [ -z "$SRC_DIR_RAW" ] ; then
-    SRC_DIR=sources
-else
-    SRC_DIR=$SRC_DIR_RAW
-fi
-DL_DIR_RAW=$(cfg dl_dir)
-if [ -z "$DL_DIR_RAW" ] ; then
-    DL_DIR="."
-else
-    DL_DIR=$DL_DIR_RAW
-    mkdir -p $DL_DIR
-fi
+DL_DIR=$(cat $TMPDIR/dldir)
 
 PV=$(command -v pv)
 
@@ -69,14 +57,18 @@ PV=$(command -v pv)
 
 ## Create source sub-directory
 
-PKGDIR=$(pwd)/$SRC_DIR/pkg-$PKG
-mkdir -p $PKGDIR
+ROOTDIR=$(pwd)
+
+PKGDIR=$ROOTDIR/sources/pkg-$PKG
+
+[ -e $PKGDIR ] && { cat <<< "Removing previously existing directory for $PKG" 1>&2 ; rm -r $PKGDIR ; }
+mkdir $PKGDIR
 
 ## Create log
 
-log() { cat <<< "$@" > $PKGDIR/log ; }
+log() { cat <<< "$@" >> $PKGDIR/log ; }
 logp() { log "$@" ; cat <<< "$@" ; }
-loge() { cat <<< "$@" > $PKGDIR/errlog ; }
+loge() { cat <<< "$@" >> $PKGDIR/errlog ; }
 
 ## Parse pkg file
 
@@ -92,7 +84,13 @@ for VAR in $PKGVARS ; do
             VAL=$(cat $TMPDIR/root)
             ;;
         arch)
-            VAL=$(cfg arch)
+            VAL=$(cfg "arch")
+            ;;
+        jobs)
+            VAL=$(cfg "jobs")
+            ;;
+        target)
+            VAL=$(cfg "arch")-u-linux-gnu
             ;;
         *)
             VAL=$(get $VAR < $PKGFILE)
@@ -105,15 +103,17 @@ cat $PKGFILE
 
 # Get values
 
-PKGNAME=$($SD/get.sh pkg < $PKGFILE)
-SOURCES=$($SD/get.sh sources < $PKGFILE)
-EXTRACT=$($SD/get.sh extract < $PKGFILE)
-BUILDDIR=$($SD/get.sh builddir <$PKGFILE)
+PKGNAME=$(get pkg < $PKGFILE)
+SOURCES=$(get sources < $PKGFILE)
+EXTRACT=$(get extract < $PKGFILE)
+BUILDDIR=$(get builddir < $PKGFILE)
+KEEP=$(get keep < $PKGFILE)
+PRE=$(get pre < $PKGFILE)
+BUIKD=$(get build < $PKGFILE)
 
 ## Download sources
 
-mkdir -p $SRC_DIR/pkg-$PKG
-cd $SRC_DIR/pkg-$PKG
+cd $PKGDIR
 
 for SRC in $SOURCES ; do
     logp "Downloading $SRC"
@@ -127,27 +127,33 @@ for SRC in $SOURCES ; do
 done
 
 extract() {
+    logp "Extracting $1 ($PV)"
     if [ "$PV" ] ; then
-        case $(grep -o '\.[^\.]$' <<< $1) in
+        mkfifo $TMPDIR/pv-pipe
+        (cat $TMPDIR/pv-pipe)&
+        case $(grep -o '\.[^\.]*$' <<< $1) in
             .tar)
-                pv $1 | tar x
+                pv -f $1 2>$TMPDIR/pv-pipe | tar x
                 ;;
             .xz)
-                pv $1 | tar xJ
+                pv -f $1 2>$TMPDIR/pv-pipe | tar xJ
                 ;;
             .bz2)
-                pv $1 | tar xj
+                pv -f $1 2>$TMPDIR/pv-pipe | tar xj
                 ;;
             .gz)
-                pv $1 | tar xz
+                pv -f $1 2>$TMPDIR/pv-pipe | tar xz
                 ;;
             .lzma)
-                pv $1 | tar x --lzma
+                pv -f $1 2>$TMPDIR/pv-pipe | tar x --lzma
                 ;;
             *)
                 logp "Unknown file extension for $1; skipping extraction"
                 ;;
         esac
+
+        wait
+        rm $TMPDIR/pv-pipe
     else
         tar -xf $1
     fi 
@@ -155,7 +161,8 @@ extract() {
 
 case $EXTRACT in
     all)
-        for FILE in $(ls) ; do
+        SRCFILES=$(ls)
+        for FILE in $SRCFILES ; do
             [ "$FILE" == "pkg" -o "$FILE" == "log" -o "$FILE" == "errlog" ] || extract $FILE
         done
         ;;
@@ -169,55 +176,41 @@ case $EXTRACT in
         ;;
 esac
 
+## Run pre-build script
 
+logp "Running pre-build script"
 
+get pre < $PKGFILE > pre.sh
+{ bash pre.sh 3>&2 2>&1 1>&3 || exit 1 ; } 2>> $PKGDIR/log | tee -a $PKGDIR/errlog
 
-#while read ACTION ARGS ; do
-#    case $ACTION in
-#        dl)
-#            OBJ=$(sed 's/.*\/\([^\/]*\)/\1/' <<< $ARGS)
-#            if [ "$DL_DIR" ] ; then
-#                [ ! -e $DL_DIR/$OBJ ] && { wget -P $DL_DIR $ARGS || { err "Failed to download source $ARGS" ; exit 1 ; } ; }
-#                cp $DL_DIR/$PKG .
-#            else
-#                wget $ARGS || { err "Failed to download source $ARGS" ; exit 1 ; }
-#            fi
-#            ;;
-#        extract)
-#            EXT=$(sed 's/.*\.\([^\.]*\)/\1/' <<< $ARGS)
-#            case $EXT in
-#                tar)
-#                    pv $ARGS | tar x
-#                    ;;
-#                xz)
-#                    pv $ARGS | tar xJ
-#                    ;;
-#                bz2)
-#                    pv $ARGS | tar xj
-#                    ;;
-#                gz)
-#                    pv $ARGS | tar xz
-#                    ;;
-#                lzma)
-#                    pv $ARGS | tar x --lzma
-#                    ;;
-#                *)
-#                    err "Unknown file extensions $EXT"
-#                    exit 1
-#                    ;;
-#            esac
-#            ;;
-#        exec)
-#            sh -c "$ARGS" || { err "Failed to execute action ($ARGS)" ; exit 1 ; }
-#            ;;
-#        sh)
-#            [ -e "$SD/base/$PKG/$ARGS" ] || { err "Failed to execute nonexistant scripts ($ARGS) ; exit 1 ; }
-#            sh $SD/base/$PKG/$ARGS || { err "Failed to execute action script ($ARGS)" ; exit 1 ; }
-#            ;;
-#        build)
-#
-#            sh $ARGS
-#
-#    esac
-#
-#done < $SD/base/$PKG/actions
+if [ "$BUILDDIR" == "yes" ] ; then
+    mkdir -p build
+    cd build
+fi
+
+## Run build script
+
+logp "Running build script"
+
+get build < $PKGFILE > build.sh
+
+mkfifo .p
+mkfifo .perr
+
+( tee -a $PKGDIR/log < .p | awk 'BEGIN {ORS=""} {print "."} NR%10==0 {fflush()}' )&
+( tee -a $PKGDIR/errlog < .perr | awk 'BEGIN {ORS=""} {print "!"; fflush()}' )&
+
+{ bash build.sh || exit 1 ; } > .p 2> .perr
+
+wait
+
+rm .p
+rm .perr
+
+## Cleanup
+
+cd $ROOTDIR
+
+[ ! "$KEEP"== "yes" ] && { logp "Cleaning package" ; rm -r $PKGDIR ; }
+
+logp "Package complete"

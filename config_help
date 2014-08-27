@@ -1,0 +1,16 @@
+Configuration options:
+
+log_dir         location of primary logs
+                default: current directory
+img_name        name of image file
+                default: out.img
+img_size        size of image in mb
+                default: 2000
+base_dir        directory to hold image file
+                default: current directory
+fs_type         filesystem type for image
+                default: ext2
+fs_options      options to pass to mkfs
+                default: (none)
+jobs            number of parallel make jobs
+

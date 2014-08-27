@@ -30,38 +30,59 @@ fi
 VERBOSE=1
 CONFIG_FILES=
 HELP=
+REMOTE=
+REMOTEDIR=
+BATCH=
+RETRIEVE=
 
-for ARG in "$@" ; do
-    case $ARG in
+while [ "$#" -gt 1 ] ; do
+    case $1 in
         --help)
             HELP=1
+            shift 1
             ;;
         --quiet)
             VERBOSE=
+            shift 1
             ;;
         -q)
             VERBOSE=
+            shift 1
+            ;;
+        --remote)
+            REMOTE=$2
+            shift 2
+            ;;
+        --remote-dir)
+            REMOTEDIR=$2
+            shift 2
+            ;;
+        --retrieve)
+            RETRIEVE=$2
+            [ ! "$RETRIEVE" ] && RETRIEVE="."
+            shift 2
             ;;
         *)
-            CONFIG_FILES="$ARG $CONFIG_FILE"
+            CONFIG_FILES="$ARG $CONFIG_FILES"
+            shift 1
             ;;
     esac
 done
 
 ## Load configuration(s)
 
-[ $VERBOSE ] && echo "Script directory: $SD"
+[ "$VERBOSE" ] && echo "Script directory: $SD"
 
 TMPDIR=$(mktemp -d)
 trap "{ rm -r $TMPDIR ; exit ; }" EXIT
 
-[ $VERBOSE ] && echo "Temporary directory: $TMPDIR"
+[ "$VERBOSE" ] && echo "Temporary directory: $TMPDIR"
 
 cp $SD/master_config $TMPDIR/config
 
 for FILE in $CONFIG_FILES ; do
     [ ! -e $FILE ] && { err "Missing configuration file $FILE" ; exit 1 ; }
-    [ $VERBOSE ] && echo "Loading configuration file $FILE"
+    [ "$VERBOSE" ] && echo "Loading configuration file $FILE"
 
     while read KEY VAL ; do
         [ -z "$(grep "$KEY" $TMPDIR/config)" ] && err "Warning: unknown configuration key '$KEY' in $FILE"
@@ -69,9 +90,23 @@ for FILE in $CONFIG_FILES ; do
     done < $FILE
 done
 
-## Launch main tool
-
 echo "$SD" > $TMPDIR/sd
 echo "$VERBOSE" > $TMPDIR/verbose
+echo "$HOME" > $TMPDIR/home
 
-env - $SD/image-main.sh $TMPDIR
+## Optional: establish remote connection
+
+#if [ "$REMOTE" ] ; then
+#    [ ! "$REMOTEDIR" ] && REMOTEDIR=~/.imagegen
+#    [ "$VERBOSE" ] && echo "Synchronizing with remote host folder $REMOTEDIR"
+#    scp -r {$SD,$TMPDIR/{config,verbose}} $REMOTE:$REMOTEDIR || { err "Failed to synchronize with remote host" ; exit 1 ; }
+#    [ "$VERBOSE" ] && echo "Executing on remote host"
+#    ssh $REMOTE "~/.imagegen/scripts/deploy-remote.sh" || exit 1
+#    [ "$RETRIEVE" ] && ssh $REMOTE "[ -e $REMOTEDIR/img ]" && { echo "Retrieving remote image" ; rsync $REMOTE:$REMOTEDIR/img $RETRIEVE || exit 1 ; }
+#else
+#    ## Launch main script
+#
+    env - $SD/image-main.sh $TMPDIR
+#fi
+
+

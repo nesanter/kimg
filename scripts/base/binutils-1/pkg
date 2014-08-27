@@ -11,14 +11,14 @@ http://ftp.gnu.org/gnu/binutils/$<pkg/>.tar.bz2
 <builddir>yes</builddir>
 
 <build>
-../$<BUILDDIR>/configure \
+../$<pkg/>/configure \
     --prefix=/tools \
-    --with-sysroot=$<ROOT> \
-    --target=$<TARGET> \
+    --with-sysroot=$<root/> \
+    --target=$<target/> \
     --disable-nls \
     --disable-werror || exit 1
 
-make -j$JOBS || exit 1
+make -j$<jobs/> || exit 1
 
 case $(uname -m) in
     x86_64) mkdir /tools/lib && ln -s lib /tools/lib64 ;;

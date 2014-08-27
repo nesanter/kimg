@@ -42,11 +42,15 @@ $SD/logger.sh $TMPDIR $(cfg log_dir)/log-$SNAP $(cfg log_dir)/errlog-$SNAP&
 
 PV=$(command -v pv)
 
-BASE_DIR=$(cfg base_dir)
+TILDE=$(sed 's/\//\\\//g' < $TMPDIR/home)
+BASE_DIR=$(cfg base_dir | sed 's/^\./'$(pwd | sed 's/\//\\\//g')'/;s/^~/'$TILDE'/')
 IMG_NAME=$(cfg img_name)
 IMG_SIZE=$(cfg img_size)
+DL_DIR=$(cfg dl_dir | sed 's/^\./'$(pwd | sed 's/\//\\\//g')'/;s/^~/'$TILDE'/')
 KBYTES=$(dc <<< "$IMG_SIZE 1024*p")
 SAVE=$(cfg save)
+
+cat <<< $DL_DIR > $TMPDIR/dldir
 
 DONE=0
 trap "{ cleanup ; exit ; }" EXIT
@@ -93,15 +97,20 @@ cd $IMG_DIR
 [ -e .resume ] && log "Resume file found" || {
     mkdir tools
 
-    [ -z "$SRC_DIR" ] && mkdir {sources,sources/logs} || mkdir -p {$SRC_DIR,$SRC_DIR/logs}
+    [ -z "$SRC_DIR" ] && mkdir sources || mkdir -p $SRC_DIR
 
     touch .resume
 }
 
 sudo $(command -v ln) -s $BASE_DIR/$IMG_DIR/tools / 2>> $ERRLOG || exit 1
 
+## Environment
+
 set +h
 umask 022
+
+export LC_ALL=POSIX
+export PATH=/tools/bin:$PATH
 
 ## Install tools
 

@@ -8,3 +8,4 @@ jobs
 save 0
 log_dir .
 dl_dir 
+arch x86_64
