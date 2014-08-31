@@ -13,4 +13,14 @@ fs_type         filesystem type for image
 fs_options      options to pass to mkfs
                 default: (none)
 jobs            number of parallel make jobs
-
+                default: (none)
+dl_dir          location of saved downloads
+                default: (none)
+arch            image architecture (do not change)
+                default: x86_64
+save            save incomplete image
+                default: 0 (no)
+mount_options   options to pass when mounting iso
+                default: (none)
+core            core packageset to install
+                default: base

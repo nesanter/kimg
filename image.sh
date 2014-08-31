@@ -69,6 +69,13 @@ while [ "$#" -gt 1 ] ; do
     esac
 done
 
+## Help
+
+if [ "$HELP" ] ; then
+    err "Syntax: image.sh [--help] [-q|--quiet] [config_files...]"
+    exit 1
+fi
+
 ## Load configuration(s)
 
 [ "$VERBOSE" ] && echo "Script directory: $SD"

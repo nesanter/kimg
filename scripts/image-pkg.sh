@@ -48,12 +48,13 @@ get() {
 
 SD=$(cat $TMPDIR/sd)
 DL_DIR=$(cat $TMPDIR/dldir)
+CORE=$(cfg "core")
 
 PV=$(command -v pv)
 
 ## Sanity
 
-[ -e $SD/base/$PKG/pkg ] || { err "Missing pkg file ($PKG)" ; exit 1 ; }
+[ -e $SD/image-pkgs/$CORE/$PKG/pkg ] || { err "Missing pkg file ($PKG)" ; exit 1 ; }
 
 ## Create source sub-directory
 
@@ -72,7 +73,7 @@ loge() { cat <<< "$@" >> $PKGDIR/errlog ; }
 
 ## Parse pkg file
 
-cp $SD/base/$PKG/pkg $PKGDIR
+cp $SD/image-pkgs/$CORE/$PKG/pkg $PKGDIR
 PKGFILE=$PKGDIR/pkg
 
 # Resolve variables

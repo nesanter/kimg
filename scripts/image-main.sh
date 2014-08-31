@@ -36,19 +36,20 @@ ERRLOG=$TMPDIR/errlog
 mkfifo $LOG
 mkfifo $ERRLOG
 SNAP=$(date +%s)
-$SD/logger.sh $TMPDIR $(cfg log_dir)/log-$SNAP $(cfg log_dir)/errlog-$SNAP&
+$SD/logger.sh $TMPDIR $(cfg "log_dir")/log-$SNAP $(cfg "log_dir")/errlog-$SNAP&
 
 ## Begin
 
 PV=$(command -v pv)
 
 TILDE=$(sed 's/\//\\\//g' < $TMPDIR/home)
-BASE_DIR=$(cfg base_dir | sed 's/^\./'$(pwd | sed 's/\//\\\//g')'/;s/^~/'$TILDE'/')
-IMG_NAME=$(cfg img_name)
-IMG_SIZE=$(cfg img_size)
-DL_DIR=$(cfg dl_dir | sed 's/^\./'$(pwd | sed 's/\//\\\//g')'/;s/^~/'$TILDE'/')
+BASE_DIR=$(cfg "base_dir" | sed 's/^\./'$(pwd | sed 's/\//\\\//g')'/;s/^~/'$TILDE'/')
+IMG_NAME=$(cfg "img_name")
+IMG_SIZE=$(cfg "img_size")
+DL_DIR=$(cfg "dl_dir" | sed 's/^\./'$(pwd | sed 's/\//\\\//g')'/;s/^~/'$TILDE'/')
 KBYTES=$(dc <<< "$IMG_SIZE 1024*p")
-SAVE=$(cfg save)
+SAVE=$(cfg "save")
+CORE=$(cfg "core")
 
 cat <<< $DL_DIR > $TMPDIR/dldir
 
@@ -75,7 +76,7 @@ RESUME=
 
     log "Making file system"
 
-    mkfs -t $(cfg fs_type) $(cfg fs_opts) $IMG_NAME >> $LOG 2>> $ERRLOG || { err "Error creating filesystem on image" ; exit 1 ; }
+    mkfs -t $(cfg "fs_type") $(cfg "fs_opts") $IMG_NAME >> $LOG 2>> $ERRLOG || { err "Error creating filesystem on image" ; exit 1 ; }
 }
 
 IMG_DIR=$(sed 's/[\.].*$//' <<< $IMG_NAME)
@@ -114,10 +115,10 @@ export PATH=/tools/bin:$PATH
 
 ## Install tools
 
-log "Installing base"
+log "Installing core packageset $CORE"
 
 while read PKG ; do
-    [ -d $SD/base/$PKG ] || { err "Package in manifest not in packages" ; exit 1 ; }
+    [ -d $SD/image-pkgs/$CORE/$PKG ] || { err "Package in manifest not in packages" ; exit 1 ; }
 
     log "Installing package $PKG"
 
@@ -125,7 +126,7 @@ while read PKG ; do
     
     log "Finished package $PKG"
     cat <<< $PKG >> .resume
-done <<< $(awk '($0 !~ /^#/) {print;}' $SD/base/manifest)
+done <<< $(awk '($0 !~ /^#/) {print;}' $SD/image-pkgs/$CORE/manifest)
 
-log "Finished base"
+log "Finished $CORE"
 
