@@ -62,19 +62,21 @@ ROOTDIR=$(pwd)
 
 PKGDIR=$ROOTDIR/sources/pkg-$PKG
 
-[ -e $PKGDIR ] && { cat <<< "Removing previously existing directory for $PKG" 1>&2 ; rm -r $PKGDIR ; }
+LOGDIR=$(cfg "log_dir")
+
+[ -e $PKGDIR ] && { err "Removing previously existing directory for $PKG" ; rm -r $PKGDIR ; }
 mkdir $PKGDIR
 
 ## Create log
 
-log() { cat <<< "$@" >> $PKGDIR/log ; }
+log() { cat <<< "$@" >> $LOGDIR/pkg-$PKG-log ; }
 logp() { log "$@" ; cat <<< "$@" ; }
-loge() { cat <<< "$@" >> $PKGDIR/errlog ; }
+loge() { cat <<< "$@" >> $LOGDIR/pkg-$PKG-errlog ; }
 
 ## Parse pkg file
 
-cp $SD/image-pkgs/$CORE/$PKG/pkg $PKGDIR
-PKGFILE=$PKGDIR/pkg
+cp $SD/image-pkgs/$CORE/$PKG/pkg $PKGDIR/.pkg
+PKGFILE=$PKGDIR/.pkg
 
 # Resolve variables
 
@@ -164,7 +166,7 @@ case $EXTRACT in
     all)
         SRCFILES=$(ls)
         for FILE in $SRCFILES ; do
-            [ "$FILE" == "pkg" -o "$FILE" == "log" -o "$FILE" == "errlog" ] || extract $FILE
+            extract $FILE
         done
         ;;
     none)
@@ -198,8 +200,8 @@ get build < $PKGFILE > build.sh
 mkfifo .p
 mkfifo .perr
 
-( tee -a $PKGDIR/log < .p | awk 'BEGIN {ORS=""} {print "."} NR%10==0 {fflush()}' )&
-( tee -a $PKGDIR/errlog < .perr | awk 'BEGIN {ORS=""} {print "!"; fflush()}' )&
+( tee -a $LOGDIR/pkg-$PKG-log < .p | awk 'BEGIN {ORS=""} {print "."} NR%10==0 {fflush()}' )&
+( tee -a $LOGDIR/pkg-$PKG-errlog < .perr | awk 'BEGIN {ORS=""} {print "!"; fflush()}' )&
 
 { bash build.sh || exit 1 ; } > .p 2> .perr
 
