@@ -76,7 +76,7 @@ RESUME=
 
     log "Making file system"
 
-    mkfs -t $(cfg "fs_type") $(cfg "fs_opts") $IMG_NAME >> $LOG 2>> $ERRLOG || { err "Error creating filesystem on image" ; exit 1 ; }
+    mkfs -t $(cfg "fs_type") -q $(cfg "fs_opts") $IMG_NAME >> $LOG 2>> $ERRLOG || { err "Error creating filesystem on image" ; exit 1 ; }
 }
 
 IMG_DIR=$(sed 's/[\.].*$//' <<< $IMG_NAME)
@@ -117,8 +117,9 @@ export PATH=/tools/bin:$PATH
 
 log "Installing core packageset $CORE"
 
-while read PKG ; do
-    [ -d "$SD/image-pkgs/$CORE/$PKG" ] || { err "Package in manifest not in packages" ; exit 1 ; }
+$(awk '($0 !~ /^#/) {print;}' $SD/image-pkgs/$CORE/manifest) | \
+    while read PKG ; do
+    [ -d "$SD/image-pkgs/$CORE/$PKG" ] || { err "Package $PKG in manifest not in packages" ; exit 1 ; }
 
     log "Installing package $PKG"
 
@@ -126,7 +127,6 @@ while read PKG ; do
     
     log "Finished package $PKG"
     cat <<< $PKG >> .resume
-done <<< $(awk '($0 !~ /^#/) {print;}' $SD/image-pkgs/$CORE/manifest)
-
+done 
 log "Finished $CORE"
 
