@@ -3,3 +3,4 @@ base_dir /tmp
 img_size 1000
 dl_dir ~/programming/kimg/dl
 save 1
+log_dir ~/programming/kimg/logs

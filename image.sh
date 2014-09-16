@@ -35,7 +35,7 @@ REMOTEDIR=
 BATCH=
 RETRIEVE=
 
-while [ "$#" -gt 1 ] ; do
+while [ "$#" -gt 0 ] ; do
     case $1 in
         --help)
             HELP=1
@@ -63,7 +63,7 @@ while [ "$#" -gt 1 ] ; do
             shift 2
             ;;
         *)
-            CONFIG_FILES="$ARG $CONFIG_FILES"
+            CONFIG_FILES="$1 $CONFIG_FILES"
             shift 1
             ;;
     esac
@@ -93,13 +93,14 @@ for FILE in $CONFIG_FILES ; do
 
     while read KEY VAL ; do
         [ -z "$(grep "$KEY" $TMPDIR/config)" ] && err "Warning: unknown configuration key '$KEY' in $FILE"
-        sed -i 's,\('"$KEY"' \).*,\1'"$VAL"',' $TMPDIR/config
+        sed -i 's,\('"$KEY"' \).*,\1'"$(sed 's,^~,'$HOME',' <<< $VAL)"',' $TMPDIR/config
     done < $FILE
 done
 
 echo "$SD" > $TMPDIR/sd
 echo "$VERBOSE" > $TMPDIR/verbose
 echo "$HOME" > $TMPDIR/home
+
 
 ## Optional: establish remote connection
 

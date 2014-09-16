@@ -13,7 +13,9 @@ LOG=$TMPDIR/log-out
 ERRLOG=$TMPDIR/errlog-out
 
 cat <<< "IMAGEGEN LOG $(date)" > $LOG
+cat <<< "(DEST $2)" > $LOG
 cat <<< "IMAGEGEN ERRLOG $(date)" > $ERRLOG
+cat <<< "(DEST $3)" > $ERRLOG
 
 (while [ -e $LOGPIPE ] ; do
     MSG=$(cat < $LOGPIPE)
@@ -29,5 +31,5 @@ done)&
 
 wait
 
-cp $LOG $2
-cp $ERRLOG $3
+cp $LOG $2/$3
+cp $ERRLOG $2/$4

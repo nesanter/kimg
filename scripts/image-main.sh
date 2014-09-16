@@ -36,7 +36,7 @@ ERRLOG=$TMPDIR/errlog
 mkfifo $LOG
 mkfifo $ERRLOG
 SNAP=$(date +%s)
-$SD/logger.sh $TMPDIR $(cfg "log_dir")/log-$SNAP $(cfg "log_dir")/errlog-$SNAP&
+$SD/logger.sh $TMPDIR $(cfg "log_dir") log-$SNAP errlog-$SNAP&
 
 ## Begin
 
@@ -117,7 +117,7 @@ export PATH=/tools/bin:$PATH
 
 log "Installing core packageset $CORE"
 
-$(awk '($0 !~ /^#/) {print;}' $SD/image-pkgs/$CORE/manifest) | \
+awk '($0 !~ /^#/) {print;}' $SD/image-pkgs/$CORE/manifest | \
     while read PKG ; do
     [ -d "$SD/image-pkgs/$CORE/$PKG" ] || { err "Package $PKG in manifest not in packages" ; exit 1 ; }
 
@@ -127,6 +127,6 @@ $(awk '($0 !~ /^#/) {print;}' $SD/image-pkgs/$CORE/manifest) | \
     
     log "Finished package $PKG"
     cat <<< $PKG >> .resume
-done 
+done || { exit 1 ; }
 log "Finished $CORE"
 
