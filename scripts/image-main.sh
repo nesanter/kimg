@@ -12,7 +12,7 @@ cfg() { sed -n 's/'"$1"' \(.*\)/\1/p' $TMPDIR/config ; }
 
 cleanup() {
     cd $BASE_DIR
-    [ -e $IMG_NAME ] && [ "$DONE" == "0" ] && [ "$SAVE" == "0" ] && { log "Removing incomplete image" ; rm $IMG_NAME ; }
+    [ -e "$IMG_NAME" ] && [ "$DONE" == "0" ] && [ "$SAVE" == "0" ] && { log "Removing incomplete image" ; rm $IMG_NAME ; }
     [ -d "$IMG_DIR" ] && { mountpoint -q $IMG_DIR && sudo $(command -v umount) $IMG_DIR ; rmdir $IMG_DIR ; }
     [ -h /tools ] && sudo $(command -v rm) /tools
     log "ENDLOG"
@@ -22,7 +22,7 @@ cleanup() {
 
 ## Check for tmp directory (argument 1)
 
-[ -d $1 ] || { cat <<< "Missing TMPDIR handoff" 1>&2 ; exit 1 ; }
+[ -d "$1" ] || { cat <<< "Missing TMPDIR handoff" 1>&2 ; exit 1 ; }
 
 TMPDIR=$1
 SD=$(cat $TMPDIR/sd)
@@ -56,23 +56,23 @@ cat <<< $DL_DIR > $TMPDIR/dldir
 DONE=0
 trap "{ cleanup ; exit ; }" EXIT
 
-[ -d $BASE_DIR ] || { err "Missing base directory" ; exit 1 ; }
+[ -d "$BASE_DIR" ] || { err "Missing base directory" ; exit 1 ; }
 
 cd $BASE_DIR
 
 RESUME=
-[ -e $IMG_NAME ] && { log "Existing image found; attempting to resume" ; RESUME=1 ; }
+[ -e "$IMG_NAME" ] && { log "Existing image found; attempting to resume" ; RESUME=1 ; }
 
-[ $RESUME ] || {
+[ "$RESUME" ] || {
     [ $(df --output=avail . | tail -n 1) -lt $KBYTES ] && { err "Not enough space on device for image file" ; exit 1 ; }
 
     log "Creating image file"
 
-    [ $VERBOSE ] && [ $PV ] && \
+    [ "$VERBOSE" ] && [ "$PV" ] && \
         dd if=/dev/zero bs=1M count=$IMG_SIZE status=none | pv -s "$IMG_SIZE"m | dd status=none of=$IMG_NAME || \
         dd if=/dev/zero bs=1M count=$IMG_SIZE of=$IMG_NAME status=none
 
-    [ -e $IMG_NAME ] || { err "Error creating image file" ; exit 1 ; }
+    [ -e "$IMG_NAME" ] || { err "Error creating image file" ; exit 1 ; }
 
     log "Making file system"
 
@@ -87,7 +87,7 @@ mkdir $IMG_DIR || { err "Error creating image directory" ; exit 1 ; }
 
 log "Mounting image (permission required)"
 
-if [ $MOUNT_OPTS ] ; then
+if [ "$MOUNT_OPTS" ] ; then
     sudo $(command -v su) -c "{ mount -o loop,$MOUNT_OPTS $IMG_NAME $IMG_DIR ; chown $(stat -c %u:%g $IMG_NAME) $IMG_DIR ; }" 2>> $ERRLOG || exit 1
 else
     sudo $(command -v su) -c "{ mount -o loop $IMG_NAME $IMG_DIR ; chown $(stat -c %u:%g $IMG_NAME) $IMG_DIR ; }" 2>> $ERRLOG || exit 1
@@ -118,7 +118,7 @@ export PATH=/tools/bin:$PATH
 log "Installing core packageset $CORE"
 
 while read PKG ; do
-    [ -d $SD/image-pkgs/$CORE/$PKG ] || { err "Package in manifest not in packages" ; exit 1 ; }
+    [ -d "$SD/image-pkgs/$CORE/$PKG" ] || { err "Package in manifest not in packages" ; exit 1 ; }
 
     log "Installing package $PKG"
 
