@@ -1,0 +1,19 @@
+<pkg>
+check-0.9.12
+</pkg>
+
+<sources>
+http://sourceforge.net/projects/check/files/0.9.12/$<pkg/>.tar.gz
+</sources>
+
+<extract>all</extract>
+
+<builddir>no</builddir>
+
+<build>
+PKG_CONFIG= ./configure --prefix=/tools
+
+make -j$<jobs/> || exit 1
+
+make install || exit 1
+</build>

@@ -9,6 +9,7 @@
 
 TMPDIR=$1
 PKG=$2
+LOGDIR=$3
 
 ## Functions
 
@@ -62,21 +63,22 @@ ROOTDIR=$(pwd)
 
 PKGDIR=$ROOTDIR/sources/pkg-$PKG
 
-LOGDIR=$(cfg "log_dir")
-
 [ -e $PKGDIR ] && { err "Removing previously existing directory for $PKG" ; rm -r $PKGDIR ; }
 mkdir $PKGDIR
 
 ## Create log
 
-log() { cat <<< "$@" >> $LOGDIR/pkg-$PKG-log ; }
+log() { cat <<< "$@" >> $LOGDIR/$PKG-log ; }
 logp() { log "$@" ; cat <<< "$@" ; }
-loge() { cat <<< "$@" >> $LOGDIR/pkg-$PKG-errlog ; }
+loge() { cat <<< "$@" >> $LOGDIR/$PKG-errlog ; }
+
+log "Beginning $PKG."
 
 ## Parse pkg file
 
 cp $SD/image-pkgs/$CORE/$PKG/pkg $PKGDIR/.pkg
 PKGFILE=$PKGDIR/.pkg
+MASTERCONFIG=$SD/image-pkgs/$CORE/config
 
 # Resolve variables
 
@@ -84,7 +86,7 @@ PKGVARS=$(vars < $PKGFILE)
 for VAR in $PKGVARS ; do
     case $VAR in
         root)
-            VAL=$(cat $TMPDIR/root)
+            VAL=$(cat $TMPDIR/root | sed 's/\//\\\//g')
             ;;
         arch)
             VAL=$(cfg "arch")
@@ -102,11 +104,10 @@ for VAR in $PKGVARS ; do
     sed -i '/\$<'$VAR'\/>/ {s/\$<'$VAR'\/>/'$VAL'/g}' $PKGFILE
 done
 
-cat $PKGFILE
+log $(cat $PKGFILE)
 
 # Get values
 
-PKGNAME=$(get pkg < $PKGFILE)
 SOURCES=$(get sources < $PKGFILE)
 EXTRACT=$(get extract < $PKGFILE)
 BUILDDIR=$(get builddir < $PKGFILE)
@@ -184,7 +185,7 @@ esac
 logp "Running pre-build script"
 
 get pre < $PKGFILE > pre.sh
-{ bash pre.sh 3>&2 2>&1 1>&3 || exit 1 ; } 2>> $PKGDIR/log | tee -a $PKGDIR/errlog
+{ bash pre.sh 3>&2 2>&1 1>&3 || exit 1 ; } 2>> $LOGDIR/$PKG-log | tee -a $LOGDIR/$PKG-errlog
 
 if [ "$BUILDDIR" == "yes" ] ; then
     mkdir -p build
@@ -200,8 +201,8 @@ get build < $PKGFILE > build.sh
 mkfifo .p
 mkfifo .perr
 
-( tee -a $LOGDIR/pkg-$PKG-log < .p | awk 'BEGIN {ORS=""} {print "."} NR%10==0 {fflush()}' )&
-( tee -a $LOGDIR/pkg-$PKG-errlog < .perr | awk 'BEGIN {ORS=""} {print "!"; fflush()}' )&
+( tee -a $LOGDIR/$PKG-log < .p | awk 'BEGIN {ORS=""} {print "."} NR%10==0 {fflush()}' )&
+( tee -a $LOGDIR/$PKG-errlog < .perr | awk 'BEGIN {ORS=""} {print "!"; fflush()}' )&
 
 { bash build.sh || exit 1 ; } > .p 2> .perr
 
@@ -214,6 +215,6 @@ rm .perr
 
 cd $ROOTDIR
 
-[ ! "$KEEP"== "yes" ] && { logp "Cleaning package" ; rm -r $PKGDIR ; }
+[ "$KEEP" == "yes" ] || { logp "Cleaning package" ; rm -r $PKGDIR ; }
 
-logp "Package complete"
+log "Package complete."

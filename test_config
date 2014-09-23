@@ -1,6 +1,7 @@
 fs_type xfs
 base_dir /tmp
-img_size 1000
+img_size 4000
 dl_dir ~/programming/kimg/dl
-save 1
+save yes
 log_dir ~/programming/kimg/logs
+jobs 9

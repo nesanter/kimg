@@ -5,7 +5,7 @@ fs_type ext2
 fs_options 
 mount_options 
 jobs 
-save 0
+save no
 log_dir .
 dl_dir 
 arch x86_64

@@ -1,0 +1,25 @@
+<pkg>
+expect5.45
+</pkg>
+
+<sources>
+http://prdownloads.sourceforge.net/expect/$<pkg/>.tar.gz
+</sources>
+
+<extract>all</extract>
+
+<builddir>no</builddir>
+
+<build>
+cp -v configure{,.orig}
+sed 's:/usr/local/bin:/bin:' configure.orig > configure
+
+./configure \
+    --prefix=tools \
+    --with-tcl=/tools/lib \
+    --with-tclinclude=/tools/include || exit 1
+
+make -j$<jobs/> || exit 1
+
+make SCRIPTS="" install || exit 1
+</build>

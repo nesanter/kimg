@@ -12,9 +12,9 @@ cfg() { sed -n 's/'"$1"' \(.*\)/\1/p' $TMPDIR/config ; }
 
 cleanup() {
     cd $BASE_DIR
-    [ -e "$IMG_NAME" ] && [ "$DONE" == "0" ] && [ "$SAVE" == "0" ] && { log "Removing incomplete image" ; rm $IMG_NAME ; }
     [ -d "$IMG_DIR" ] && { mountpoint -q $IMG_DIR && sudo $(command -v umount) $IMG_DIR ; rmdir $IMG_DIR ; }
     [ -h /tools ] && sudo $(command -v rm) /tools
+    [ -e "$IMG_NAME" ] && [ "$DONE" == "no" ] && { [ "$SAVE" == "yes" ] && { log "Saving partial image as $IMG_NAME.save" ; mv $IMG_NAME $IMG_NAME.save ; } || { log "Removing incomplete image" ; rm $IMG_NAME ; } ; }
     log "ENDLOG"
     err "ENDLOG"
     wait
@@ -35,8 +35,9 @@ ERRLOG=$TMPDIR/errlog
 
 mkfifo $LOG
 mkfifo $ERRLOG
-SNAP=$(date +%s)
-$SD/logger.sh $TMPDIR $(cfg "log_dir") log-$SNAP errlog-$SNAP&
+LOGDIR=$(cfg "log_dir")/$(date +%s)
+mkdir -p $LOGDIR
+$SD/logger.sh $TMPDIR $LOGDIR log errlog&
 
 ## Begin
 
@@ -53,17 +54,17 @@ CORE=$(cfg "core")
 
 cat <<< $DL_DIR > $TMPDIR/dldir
 
-DONE=0
+DONE=no
 trap "{ cleanup ; exit ; }" EXIT
 
 [ -d "$BASE_DIR" ] || { err "Missing base directory" ; exit 1 ; }
 
 cd $BASE_DIR
 
-RESUME=
-[ -e "$IMG_NAME" ] && { log "Existing image found; attempting to resume" ; RESUME=1 ; }
+RESUME="no"
+[ -e "$IMG_NAME" ] && { log "Existing image found; attempting to resume" ; RESUME="yes" ; }
 
-[ "$RESUME" ] || {
+[ "$RESUME" == "yes" ] || {
     [ $(df --output=avail . | tail -n 1) -lt $KBYTES ] && { err "Not enough space on device for image file" ; exit 1 ; }
 
     log "Creating image file"
@@ -81,7 +82,7 @@ RESUME=
 
 IMG_DIR=$(sed 's/[\.].*$//' <<< $IMG_NAME)
 
-cat <<< $IMG_DIR > $TMPDIR/root
+cat <<< "$BASE_DIR/$IMG_DIR" > $TMPDIR/root
 
 mkdir $IMG_DIR || { err "Error creating image directory" ; exit 1 ; }
 
@@ -119,14 +120,20 @@ log "Installing core packageset $CORE"
 
 awk '($0 !~ /^#/) {print;}' $SD/image-pkgs/$CORE/manifest | \
     while read PKG ; do
-    [ -d "$SD/image-pkgs/$CORE/$PKG" ] || { err "Package $PKG in manifest not in packages" ; exit 1 ; }
 
-    log "Installing package $PKG"
+    grep $PKG .resume > /dev/null && { log "Skipping previously installed package $PKG" ; } || {
+        [ -d "$SD/image-pkgs/$CORE/$PKG" ] || { err "Package $PKG in manifest not in packages" ; exit 1 ; }
 
-    $SD/image-pkg.sh $TMPDIR $PKG 2>> $ERRLOG || { err "Error installing package $PKG" ; exit 1 ; }
-    
-    log "Finished package $PKG"
-    cat <<< $PKG >> .resume
+        log "Located package $PKG"
+
+        $SD/image-pkg.sh $TMPDIR $PKG $LOGDIR 2>> $ERRLOG || { err "Error installing package $PKG" ; exit 1 ; }
+        
+        log "Completed package $PKG"
+        cat <<< $PKG >> .resume
+    }
 done || { exit 1 ; }
+
+DONE=yes
+
 log "Finished $CORE"
 

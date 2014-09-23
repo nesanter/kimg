@@ -1,2 +1,7 @@
 binutils-1
 gcc-tools-1
+linux-headers
+glibc
+libstdc++
+binutils-2
+gcc-tools-2

@@ -1,0 +1,31 @@
+<pkg>
+binutils-2.24
+</pkg>
+
+<sources>
+$<pkg/>.tar.bz2
+</sources>
+
+<extract>all</extract>
+
+<builddir>yes</builddir>
+
+<build>
+CC=$<target/>-gcc \
+AR=$<target/>-ar \
+RANLIB=$<target/>-ranlib \
+../$<pkg/>/configure \
+    --prefix=/tools \
+    --disable-nls \
+    --disable-werror \
+    --with-lib-path=/tools/lib \
+    --with-sysroot || exit 1
+
+make -j$<jobs/> || exit 1
+
+make install || exit 1
+
+make -C ld clean || exit 1
+make -C ld LIB_PATH=/usr/lib:/lib || exit 1
+cp -v ld/ld-new /tools/bin || exit 1
+</build>

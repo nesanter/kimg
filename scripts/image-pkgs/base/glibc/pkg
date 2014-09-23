@@ -1,0 +1,36 @@
+<pkg>
+glibc-2.19
+</pkg>
+
+<kernel-ver>3.13.3</kernel>
+
+<sources>
+http://ftp.gnu.org/gnu/glibc/$<pkg/>.tar.xz
+</sources>
+
+<extract>all</extract>
+
+<builddir>yes</builddir>
+
+<build>
+../$<pkg/>/configure \
+    --prefix=/tools \
+    --host=$<target/> \
+    --build=$(../$<pkg/>/scripts/config.guess) \
+    --disable-profile \
+    --enable-kernel=$<kernel-ver/> \
+    --with-headers=/tools/include \
+    libc_cv_forced_unwind=yes \
+    libc_cv_ctors_header=yes \
+    libc_cv_c_cleanup=yes || exit 1
+
+make -j$<jobs/> || exit 1
+make install || exit 1
+
+echo 'main(){}' > dummy.c
+$<target/>-gcc dummy.c || exit 1
+readelf -l a.out | grep ': /tools'
+[ "$(readelf -l a.out | grep '[Requesting program interpreter: /tools/lib\(64\)\?/ld-linux.so.2]')" ] && echo "Test passed" || exit 1
+
+rm dummy.c a.out
+</build>

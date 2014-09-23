@@ -1,0 +1,25 @@
+<name>
+linux-headers
+</pkg>
+
+<pkg>
+linux-3.13.3
+</pkg>
+
+<sources>
+http://www.kernel.org/pub/linux/kernel/v3.x/$<pkg/>.tar.xz
+</sources>
+
+<extract>all</extract>
+
+<builddir>no</builddir>
+
+<build>
+cd $<pkg/>
+
+make mrproper
+
+make headers_check
+make INSTALL_HDR_PATH=dest headers_install
+cp -rv dest/include/* /tools/include
+</build>

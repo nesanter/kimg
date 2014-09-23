@@ -1,0 +1,27 @@
+<pkg>
+gcc-4.8.2
+</pkg>
+
+<sources>
+$<pkg/>.tar.bz2
+</sources>
+
+<extract>all</extract>
+
+<builddir>yes</builddir>
+
+<build>
+../$<pkg/>/libstdc++-v3/configure \
+    --host=$<target/> \
+    --prefix=/tools \
+    --disable-multilib \
+    --disable-shared \
+    --disable-nls \
+    --disable-libstdcxx-threads \
+    --disable-libstdcxx-pch \
+    --with-gxx-include-dir=/tools/$<target/>/include/c++/4.8.2
+
+make -j$<jobs/> || exit 1
+
+make install || exit 1
+</build>

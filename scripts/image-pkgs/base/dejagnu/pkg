@@ -1,0 +1,17 @@
+<pkg>
+dejagnu-1.5.1
+</pkg>
+
+<sources>
+http://ftp.gnu.org/gnu/dejagnu/$<pkg/>.tar.gz
+</sources>
+
+<extract>all</extract>
+
+<builddir>no</builddir>
+
+<build>
+./configure --prefix=/tools || exit 1
+
+make install || exit 1
+</build>

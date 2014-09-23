@@ -14,6 +14,7 @@ http://ftp.gnu.org/gnu/binutils/$<pkg/>.tar.bz2
 ../$<pkg/>/configure \
     --prefix=/tools \
     --with-sysroot=$<root/> \
+    --with-lib-path=/tools/lib \
     --target=$<target/> \
     --disable-nls \
     --disable-werror || exit 1

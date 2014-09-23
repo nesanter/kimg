@@ -1,0 +1,24 @@
+<pkg>
+tcl-8.6.1
+</pkg>
+
+<sources>
+http://prdownloads.sourceforge.net/tcl/$<pkg/>-src.tar.gz
+</sources>
+
+<extract>all</extract>
+
+<builddir>no</builddir>
+
+<build>
+cd unix
+./configure --prefix=/tools || exit 1
+
+make -j$<jobs/> || exit 1
+
+make install || exit 1
+
+chmod -v u+w /tools/lib/libtcl8.6.so && \
+make install-private-headers && \
+ln -sv tclsh8.6 /tools/bin/tclsh || exit 1
+</build>
